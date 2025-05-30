@@ -452,4 +452,9 @@ public class AVL implements Tree {
         }
         return result;
     }
+
+
+    public BTreeNode getRoot() {
+        return root;
+    }
 }//Akil

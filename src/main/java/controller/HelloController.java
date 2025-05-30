@@ -14,9 +14,7 @@ public class HelloController {
     @FXML
     private void load(String form) {
         try {
-
-            FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("/"+form));
-
+            FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("/" + form));
 
             if (fxmlLoader.getLocation() == null) {
                 System.err.println("No se puede encontrar el archivo FXML: " + form);
@@ -53,21 +51,16 @@ public class HelloController {
 
     @FXML
     void bubbleSortOnAction(ActionEvent event) {
-
-        load("bubbleSorting.fxml");
+        load("graphic-BST-AVL.fxml");
     }
-
 
     @FXML
     void impBubbleSortOnAction(ActionEvent event) {
-        load("improvedBubbleSorting.fxml");
+        load("tour BST-AVL.fxml");
     }
-
 
     @FXML
     void selectionSortOnAction(ActionEvent event) {
-
-        load("selectionSorting.fxml");
+        load("BST-AVL operations.fxml");
     }
-
 }
