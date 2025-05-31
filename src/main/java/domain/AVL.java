@@ -1,4 +1,3 @@
-
 package domain;
 
 public class AVL implements Tree {
@@ -188,20 +187,35 @@ public class AVL implements Tree {
         }
     }
 
+    // MÉTODO CORREGIDO: height(Object element) - para encontrar la altura de un elemento específico
     @Override
     public int height(Object element) throws TreeException {
         if(isEmpty())
             throw new TreeException("AVL Binary Search Tree is empty");
-        return height(root, element, 0);
+        int result = height(root, element, 0);
+        if(result == -1) {
+            throw new TreeException("Element not found in tree");
+        }
+        return result;
     }
 
     private int height(BTreeNode node, Object element, int level){
-        if(node==null) return 0;
+        if(node==null) return -1; // Elemento no encontrado
         else if(util.Utility.compare(node.data, element)==0) return level;
-        else return Math.max(height(node.left, element, ++level),
-                    height(node.right, element, level));
+        else {
+            // Corregir el problema del ++level
+            int leftHeight = height(node.left, element, level + 1);
+            int rightHeight = height(node.right, element, level + 1);
+
+            // Si el elemento se encontró en algún subárbol, devolver esa altura
+            if(leftHeight != -1) return leftHeight;
+            if(rightHeight != -1) return rightHeight;
+
+            return -1; // No se encontró el elemento
+        }
     }
 
+    // MÉTODO CORREGIDO: height() - para obtener la altura total del árbol
     @Override
     public int height() throws TreeException {
         if(isEmpty())
@@ -209,12 +223,7 @@ public class AVL implements Tree {
         return height(root);
     }
 
-    private int height(BTreeNode node, int level){
-        if(node==null) return level-1;
-        return Math.max(height(node.left, ++level),
-                height(node.right, level));
-    }
-
+    // MÉTODO PRINCIPAL CORREGIDO: Solo esta implementación de height(BTreeNode)
     private int height(BTreeNode node){
         if(node==null) return -1;
         return Math.max(height(node.left), height(node.right)) + 1;
@@ -452,7 +461,6 @@ public class AVL implements Tree {
         }
         return result;
     }
-
 
     public BTreeNode getRoot() {
         return root;

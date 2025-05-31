@@ -47,15 +47,23 @@ public class TourController {
     private Map<Integer, NodePosition> nodePositions;
     private Timeline animationTimeline;
 
+    // Constantes para el diseño mejorado
+    private static final double NODE_RADIUS = 15; // Reducido de 20 a 15
+    private static final double VERTICAL_SPACING = 60; // Espaciado vertical entre niveles
+    private static final double MIN_HORIZONTAL_SPACING = 35; // Espaciado mínimo horizontal
+    private static final int FONT_SIZE = 10; // Tamaño de fuente reducido
+
     // Clase interna para representar un nodo del árbol
     private static class TreeNode {
         int value;
         TreeNode left, right;
+        int level; // Agregar nivel para mejor cálculo de posiciones
 
         TreeNode(int value) {
             this.value = value;
             this.left = null;
             this.right = null;
+            this.level = 0;
         }
     }
 
@@ -79,7 +87,7 @@ public class TourController {
         treeTypeGroup = new ToggleGroup();
         rbBST.setToggleGroup(treeTypeGroup);
         rbAVL.setToggleGroup(treeTypeGroup);
-        rbBST.setSelected(true); // BST seleccionado por defecto
+        rbBST.setSelected(true);
 
         nodePositions = new HashMap<>();
 
@@ -97,12 +105,10 @@ public class TourController {
     }
 
     private void generateRandomTree() {
-        // Detener animación anterior si existe
         if (animationTimeline != null) {
             animationTimeline.stop();
         }
 
-        // Crear nuevo árbol según el tipo seleccionado
         if (rbBST.isSelected()) {
             currentTree = new BST();
             lblTourTitle.setText("Graphic Binary Search Tree - Transversal Tour");
@@ -111,39 +117,30 @@ public class TourController {
             lblTourTitle.setText("Graphic AVL Tree - Transversal Tour");
         }
 
-        // Generar valores aleatorios únicos entre 0 y 50
-        // Para BST usar menos valores para evitar árboles muy desbalanceados
-        int numValues = rbBST.isSelected() ? 15 : 20;
+        // Reducir número de valores para mejor visualización
+        int numValues = rbBST.isSelected() ? 12 : 15; // Reducido
         Set<Integer> uniqueValues = new HashSet<>();
         Random random = new Random();
 
+        // Usar rango más pequeño para valores más manejables
         while (uniqueValues.size() < numValues) {
-            uniqueValues.add(random.nextInt(51)); // 0 a 50
+            uniqueValues.add(random.nextInt(50)); // 0 a 49
         }
 
         currentData = new ArrayList<>(uniqueValues);
 
-        // Para BST, no ordenar para mantener la estructura natural
-        // Para AVL, podemos mezclar un poco
         if (!rbBST.isSelected()) {
             Collections.shuffle(currentData);
         }
 
         System.out.println("Generated values: " + currentData);
 
-        // Insertar valores en el árbol
         try {
             for (Integer value : currentData) {
                 currentTree.add(value);
-                System.out.println("Added: " + value);
             }
 
-            System.out.println("Tree created successfully. Empty: " + currentTree.isEmpty());
-
-            // Dibujar el árbol
             drawTree();
-
-            // Mostrar PreOrder por defecto
             showTraversal("PreOrder");
 
         } catch (Exception e) {
@@ -155,7 +152,6 @@ public class TourController {
 
     private void switchTreeType() {
         if (currentData != null && !currentData.isEmpty()) {
-            // Recrear el árbol con los mismos datos pero diferente tipo
             if (rbBST.isSelected()) {
                 currentTree = new BST();
                 lblTourTitle.setText("Graphic Binary Search Tree - Transversal Tour");
@@ -165,11 +161,9 @@ public class TourController {
             }
 
             try {
-                // Insertar los mismos valores
                 for (Integer value : currentData) {
                     currentTree.add(value);
                 }
-
                 drawTree();
                 showTraversal("PreOrder");
             } catch (Exception e) {
@@ -184,37 +178,24 @@ public class TourController {
 
         try {
             if (!currentTree.isEmpty()) {
-                System.out.println("Drawing tree...");
-
-                // Debug: mostrar los recorridos
-                String preOrder = currentTree.preOrder().trim();
-                String inOrder = currentTree.inOrder().trim();
-                System.out.println("PreOrder: " + preOrder);
-                System.out.println("InOrder: " + inOrder);
-
-                // Construir representación interna del árbol para poder dibujarlo
                 TreeNode root = buildTreeRepresentation();
-
                 if (root != null) {
-                    System.out.println("Tree representation built successfully");
+                    // Calcular dimensiones del panel
+                    double paneWidth = Math.max(treePane.getWidth(), 750);
+                    double paneHeight = Math.max(treePane.getHeight(), 450);
 
-                    double paneWidth = treePane.getPrefWidth();
-                    if (paneWidth <= 0) paneWidth = 800; // Valor por defecto
+                    // Calcular el ancho total del árbol
+                    int treeWidth = calculateTreeWidth(root);
 
-                    double paneHeight = treePane.getPrefHeight();
-                    if (paneHeight <= 0) paneHeight = 500; // Valor por defecto
+                    // Ajustar el espaciado inicial basado en el ancho del árbol
+                    double initialSpacing = Math.min(paneWidth / (treeWidth + 1), paneWidth * 0.25);
 
-                    // Calcular el ancho inicial para la raíz
-                    double initialWidth = paneWidth * 0.3;
+                    // Establecer niveles para cada nodo
+                    setNodeLevels(root, 0);
 
-                    // Dibujar desde la raíz
-                    drawNode(root, paneWidth / 2, 60, initialWidth);
-                } else {
-                    System.out.println("Failed to build tree representation");
-                    lblSubTitle.setText("Error: Cannot build tree representation");
+                    // Dibujar desde la raíz con mejor espaciado
+                    drawNodeImproved(root, paneWidth / 2, 40, initialSpacing);
                 }
-            } else {
-                System.out.println("Tree is empty");
             }
         } catch (Exception e) {
             System.err.println("Error drawing tree: " + e.getMessage());
@@ -223,15 +204,28 @@ public class TourController {
         }
     }
 
+    // Método para calcular el ancho del árbol (número de hojas en el nivel más profundo)
+    private int calculateTreeWidth(TreeNode node) {
+        if (node == null) return 0;
+        if (node.left == null && node.right == null) return 1;
+        return calculateTreeWidth(node.left) + calculateTreeWidth(node.right);
+    }
+
+    // Establecer niveles para cada nodo
+    private void setNodeLevels(TreeNode node, int level) {
+        if (node == null) return;
+        node.level = level;
+        setNodeLevels(node.left, level + 1);
+        setNodeLevels(node.right, level + 1);
+    }
+
     private TreeNode buildTreeRepresentation() {
         try {
-            // Usar el recorrido preorder para reconstruir el árbol
             String preOrderStr = currentTree.preOrder().trim();
             if (preOrderStr.isEmpty()) return null;
 
             String[] preOrderValues = preOrderStr.split("\\s+");
 
-            // Para BST, podemos usar solo preorder para reconstruir
             if (rbBST.isSelected()) {
                 List<Integer> preOrder = new ArrayList<>();
                 for (String val : preOrderValues) {
@@ -239,7 +233,6 @@ public class TourController {
                 }
                 return buildBSTFromPreOrder(preOrder, 0, preOrder.size() - 1, Integer.MIN_VALUE, Integer.MAX_VALUE);
             } else {
-                // Para AVL usamos preorder e inorder
                 String inOrderStr = currentTree.inOrder().trim();
                 String[] inOrderValues = inOrderStr.split("\\s+");
 
@@ -249,17 +242,14 @@ public class TourController {
                 for (String val : preOrderValues) {
                     preOrder.add(Integer.parseInt(val));
                 }
-
                 for (String val : inOrderValues) {
                     inOrder.add(Integer.parseInt(val));
                 }
 
                 return buildTreeFromTraversals(preOrder, inOrder);
             }
-
         } catch (Exception e) {
             System.err.println("Error building tree representation: " + e.getMessage());
-            e.printStackTrace();
             return null;
         }
     }
@@ -271,7 +261,6 @@ public class TourController {
 
         int rootValue = preOrder.get(start);
 
-        // Verificar si el valor está en el rango válido para BST
         if (rootValue < min || rootValue > max) {
             return null;
         }
@@ -282,16 +271,12 @@ public class TourController {
             return root;
         }
 
-        // Encontrar el primer elemento mayor que root para dividir subárboles
         int i = start + 1;
         while (i <= end && preOrder.get(i) < rootValue) {
             i++;
         }
 
-        // Construir subárbol izquierdo (elementos menores que root)
         root.left = buildBSTFromPreOrder(preOrder, start + 1, i - 1, min, rootValue - 1);
-
-        // Construir subárbol derecho (elementos mayores que root)
         root.right = buildBSTFromPreOrder(preOrder, i, end, rootValue + 1, max);
 
         return root;
@@ -301,7 +286,6 @@ public class TourController {
         if (preOrder.isEmpty() || inOrder.isEmpty()) {
             return null;
         }
-
         return buildTreeHelper(preOrder, inOrder, 0, 0, inOrder.size());
     }
 
@@ -311,11 +295,9 @@ public class TourController {
             return null;
         }
 
-        // El primer elemento del preorder es la raíz
         int rootValue = preOrder.get(preStart);
         TreeNode root = new TreeNode(rootValue);
 
-        // Encontrar la posición de la raíz en inorder
         int rootIndex = -1;
         for (int i = inStart; i < inEnd; i++) {
             if (inOrder.get(i) == rootValue) {
@@ -325,67 +307,67 @@ public class TourController {
         }
 
         if (rootIndex == -1) {
-            return root; // No se encontró en inorder, solo retornar el nodo
+            return root;
         }
 
-        // Tamaño del subárbol izquierdo
         int leftSize = rootIndex - inStart;
 
-        // Construir recursivamente los subárboles
         root.left = buildTreeHelper(preOrder, inOrder, preStart + 1, inStart, rootIndex);
         root.right = buildTreeHelper(preOrder, inOrder, preStart + 1 + leftSize, rootIndex + 1, inEnd);
 
         return root;
     }
 
-    private void drawNode(TreeNode node, double x, double y, double xOffset) {
+    // Método mejorado para dibujar nodos con mejor espaciado
+    private void drawNodeImproved(TreeNode node, double x, double y, double spacing) {
         if (node == null) return;
 
-        // Crear círculo para el nodo
-        Circle circle = new Circle(x, y, 20);
+        // Crear círculo más pequeño
+        Circle circle = new Circle(x, y, NODE_RADIUS);
         circle.setFill(Color.LIGHTBLUE);
         circle.setStroke(Color.DARKBLUE);
-        circle.setStrokeWidth(2);
+        circle.setStrokeWidth(1.5);
 
-        // Crear texto para el valor
+        // Crear texto más pequeño
         Text text = new Text(String.valueOf(node.value));
-        text.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+        text.setFont(Font.font("Arial", FontWeight.BOLD, FONT_SIZE));
         text.setFill(Color.BLACK);
 
-        // Centrar el texto en el círculo
+        // Centrar el texto
         text.setX(x - text.getBoundsInLocal().getWidth() / 2);
-        text.setY(y + 4);
+        text.setY(y + 3);
 
-        // Agregar al panel
         treePane.getChildren().addAll(circle, text);
-
-        // Guardar posición
         nodePositions.put(node.value, new NodePosition(x, y, circle, text));
 
-        // Dibujar hijos
-        double nextY = y + 80;
-        double nextXOffset = xOffset * 0.6;
+        // Calcular posiciones de hijos con espaciado adaptativo
+        double nextY = y + VERTICAL_SPACING;
+        double nextSpacing = Math.max(spacing * 0.6, MIN_HORIZONTAL_SPACING);
 
         if (node.left != null) {
-            double leftX = x - xOffset;
-            // Dibujar línea de conexión
-            Line line = new Line(x - 15, y + 15, leftX + 15, nextY - 15);
-            line.setStroke(Color.DARKGREEN);
-            line.setStrokeWidth(2);
-            treePane.getChildren().add(0, line); // Agregar al fondo
+            double leftX = Math.max(x - spacing, NODE_RADIUS + 5);
 
-            drawNode(node.left, leftX, nextY, nextXOffset);
+            // Línea de conexión más fina
+            Line line = new Line(x - NODE_RADIUS * 0.7, y + NODE_RADIUS * 0.7,
+                    leftX + NODE_RADIUS * 0.7, nextY - NODE_RADIUS * 0.7);
+            line.setStroke(Color.DARKGREEN);
+            line.setStrokeWidth(1.5);
+            treePane.getChildren().add(0, line);
+
+            drawNodeImproved(node.left, leftX, nextY, nextSpacing);
         }
 
         if (node.right != null) {
-            double rightX = x + xOffset;
-            // Dibujar línea de conexión
-            Line line = new Line(x + 15, y + 15, rightX - 15, nextY - 15);
-            line.setStroke(Color.DARKGREEN);
-            line.setStrokeWidth(2);
-            treePane.getChildren().add(0, line); // Agregar al fondo
+            double paneWidth = Math.max(treePane.getWidth(), 750);
+            double rightX = Math.min(x + spacing, paneWidth - NODE_RADIUS - 5);
 
-            drawNode(node.right, rightX, nextY, nextXOffset);
+            Line line = new Line(x + NODE_RADIUS * 0.7, y + NODE_RADIUS * 0.7,
+                    rightX - NODE_RADIUS * 0.7, nextY - NODE_RADIUS * 0.7);
+            line.setStroke(Color.DARKGREEN);
+            line.setStrokeWidth(1.5);
+            treePane.getChildren().add(0, line);
+
+            drawNodeImproved(node.right, rightX, nextY, nextSpacing);
         }
     }
 
@@ -411,7 +393,6 @@ public class TourController {
 
             lblSubTitle.setText(subtitle);
 
-            // Animar el recorrido
             if (!result.trim().isEmpty()) {
                 animateTraversal(result.trim().split("\\s+"));
             }
@@ -422,15 +403,11 @@ public class TourController {
     }
 
     private void animateTraversal(String[] values) {
-        // Detener animación anterior
         if (animationTimeline != null) {
             animationTimeline.stop();
         }
 
-        // Resetear colores
         resetNodeColors();
-
-        // Crear nueva animación
         animationTimeline = new Timeline();
 
         for (int i = 0; i < values.length; i++) {
@@ -438,14 +415,13 @@ public class TourController {
             final Integer value = Integer.parseInt(values[i]);
 
             KeyFrame keyFrame = new KeyFrame(
-                    Duration.seconds(i * 0.8), // 0.8 segundos entre cada paso
+                    Duration.seconds(i * 0.8),
                     e -> highlightNode(value, index + 1)
             );
 
             animationTimeline.getKeyFrames().add(keyFrame);
         }
 
-        // Agregar frame final para resetear colores después de 3 segundos
         KeyFrame resetFrame = new KeyFrame(
                 Duration.seconds(values.length * 0.8 + 3),
                 e -> resetNodeColors()
@@ -458,29 +434,26 @@ public class TourController {
     private void highlightNode(Integer value, int step) {
         NodePosition nodePos = nodePositions.get(value);
         if (nodePos != null) {
-            // Cambiar color del nodo actual
             nodePos.circle.setFill(Color.YELLOW);
             nodePos.circle.setStroke(Color.RED);
-            nodePos.circle.setStrokeWidth(3);
+            nodePos.circle.setStrokeWidth(2.5);
 
-            // Mostrar número de paso
-            Text stepText = new Text(nodePos.x + 25, nodePos.y - 25, String.valueOf(step));
-            stepText.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+            // Texto de paso más pequeño y mejor posicionado
+            Text stepText = new Text(nodePos.x + NODE_RADIUS + 5, nodePos.y - NODE_RADIUS - 5, String.valueOf(step));
+            stepText.setFont(Font.font("Arial", FontWeight.BOLD, 9));
             stepText.setFill(Color.RED);
-            stepText.setId("step-" + step); // Para poder identificarlo después
+            stepText.setId("step-" + step);
             treePane.getChildren().add(stepText);
         }
     }
 
     private void resetNodeColors() {
-        // Resetear colores de nodos
         for (NodePosition nodePos : nodePositions.values()) {
             nodePos.circle.setFill(Color.LIGHTBLUE);
             nodePos.circle.setStroke(Color.DARKBLUE);
-            nodePos.circle.setStrokeWidth(2);
+            nodePos.circle.setStrokeWidth(1.5);
         }
 
-        // Remover textos de pasos
         treePane.getChildren().removeIf(node ->
                 node instanceof Text &&
                         node.getId() != null &&

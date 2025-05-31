@@ -48,6 +48,9 @@ public class GraphicController implements Initializable {
     private boolean showTourInfo = false;
     private final double PANE_WIDTH = 1200.0;
     private final double PANE_HEIGHT = 600.0;
+    private final double NODE_RADIUS = 15.0; // Reducido de 20 a 15
+    private final double VERTICAL_SPACING = 65.0; // Reducido de 80 a 65
+    private final double INITIAL_Y = 50.0; // Reducido de 60 a 50
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -79,9 +82,9 @@ public class GraphicController implements Initializable {
         bstTree.clear();
         avlTree.clear();
 
-        // Generar 30 valores aleatorios únicos entre 0 y 50
+        // Generar 20 valores aleatorios únicos entre 0 y 50 (reducido de 30 a 20)
         List<Integer> values = new ArrayList<>();
-        while (values.size() < 30) {
+        while (values.size() < 20) {
             int value = (int) (Math.random() * 51); // 0 a 50
             if (!values.contains(value)) {
                 values.add(value);
@@ -110,14 +113,20 @@ public class GraphicController implements Initializable {
     }
 
     private void updateTreeStatus() {
-        if (rbBST.isSelected()) {
-            boolean balanced = bstTree.isBalanced();
-            lblTreeStatus.setText(balanced ? "BST is balanced!!!" : "BST is not balanced!!!");
-            lblTreeStatus.setTextFill(balanced ? Color.GREEN : Color.RED);
-        } else if (rbAVL.isSelected()) {
-            // AVL siempre debe estar balanceado
-            lblTreeStatus.setText("AVL is balanced!!!");
-            lblTreeStatus.setTextFill(Color.GREEN);
+        try {
+            if (rbBST.isSelected()) {
+                boolean balanced = bstTree.isBalanced();
+                lblTreeStatus.setText(balanced ? "BST is balanced!!!" : "BST is not balanced!!!");
+                lblTreeStatus.setTextFill(balanced ? Color.GREEN : Color.RED);
+            } else if (rbAVL.isSelected()) {
+                // Verificar si AVL está realmente balanceado
+                boolean balanced = avlTree.isBalanced();
+                lblTreeStatus.setText(balanced ? "AVL is balanced!!!" : "AVL is not balanced!!!");
+                lblTreeStatus.setTextFill(balanced ? Color.GREEN : Color.RED);
+            }
+        } catch (Exception e) {
+            lblTreeStatus.setText("Error checking balance");
+            lblTreeStatus.setTextFill(Color.RED);
         }
     }
 
@@ -133,14 +142,32 @@ public class GraphicController implements Initializable {
         BTreeNode root = getCurrentTreeRoot();
 
         if (root != null) {
-            // Dibujar el árbol con espaciado adecuado
-            drawTreeRecursive(root, PANE_WIDTH / 2, 60, PANE_WIDTH / 4);
+            // Calcular el ancho inicial basado en la altura del árbol
+            int treeHeight = getCurrentTreeHeight();
+            double initialXOffset = Math.min(PANE_WIDTH / 3, PANE_WIDTH / Math.pow(2, Math.min(treeHeight, 4)));
+
+            // Dibujar el árbol con espaciado adaptativo
+            drawTreeRecursive(root, PANE_WIDTH / 2, INITIAL_Y, initialXOffset);
         }
 
         // Mostrar información del tour si está activado
         if (showTourInfo) {
             displayTourInfo();
         }
+    }
+
+    private int getCurrentTreeHeight() {
+        try {
+            if (rbBST.isSelected()) {
+                return bstTree.height();
+            } else if (rbAVL.isSelected()) {
+                return avlTree.height();
+            }
+        } catch (Exception e) {
+            // Si hay error, asumir altura moderada
+            return 4;
+        }
+        return 0;
     }
 
     private BTreeNode getCurrentTreeRoot() {
@@ -165,68 +192,78 @@ public class GraphicController implements Initializable {
     private void drawLevelLines() {
         // Dibujar líneas horizontales para los niveles
         for (int i = 1; i <= 8; i++) {
-            double y = 40 + (i * 70); // Espaciado entre niveles
+            double y = INITIAL_Y - 10 + (i * VERTICAL_SPACING);
             if (y < PANE_HEIGHT - 50) {
                 Line line = new Line(0, y, PANE_WIDTH, y);
                 line.setStroke(Color.ORANGE);
                 line.setStrokeWidth(1);
+                line.setOpacity(0.5);
                 treePane.getChildren().add(line);
 
                 // Añadir números de nivel
                 Text levelNumber = new Text(10, y - 5, String.valueOf(i - 1));
                 levelNumber.setFill(Color.ORANGE);
-                levelNumber.setFont(Font.font("System", FontWeight.BOLD, 12));
+                levelNumber.setFont(Font.font("System", FontWeight.BOLD, 10));
                 treePane.getChildren().add(levelNumber);
             }
         }
     }
 
     private void drawTreeRecursive(BTreeNode node, double x, double y, double xOffset) {
-        if (node == null) return;
+        if (node == null || y > PANE_HEIGHT - 50) return;
 
         // Obtener hijos usando reflexión
         BTreeNode leftChild = getLeftChild(node);
         BTreeNode rightChild = getRightChild(node);
 
+        // Ajustar el offset para niveles más profundos
+        double nextXOffset = Math.max(xOffset / 1.7, 25.0); // Mínimo de 25 píxeles
+
         // Dibujar conexiones a hijos (líneas)
         if (leftChild != null) {
-            double childX = x - xOffset;
-            double childY = y + 80;
-            Line line = new Line(x, y, childX, childY);
-            line.setStroke(Color.GRAY);
-            line.setStrokeWidth(2);
-            treePane.getChildren().add(line);
+            double childX = Math.max(x - xOffset, NODE_RADIUS + 10);
+            double childY = y + VERTICAL_SPACING;
+            if (childX >= NODE_RADIUS && childX <= PANE_WIDTH - NODE_RADIUS) {
+                Line line = new Line(x, y, childX, childY);
+                line.setStroke(Color.GRAY);
+                line.setStrokeWidth(1.5);
+                treePane.getChildren().add(line);
 
-            // Dibujar hijo izquierdo recursivamente con menos espaciado
-            drawTreeRecursive(leftChild, childX, childY, xOffset / 1.8);
+                // Dibujar hijo izquierdo recursivamente
+                drawTreeRecursive(leftChild, childX, childY, nextXOffset);
+            }
         }
 
         if (rightChild != null) {
-            double childX = x + xOffset;
-            double childY = y + 80;
-            Line line = new Line(x, y, childX, childY);
-            line.setStroke(Color.GRAY);
-            line.setStrokeWidth(2);
-            treePane.getChildren().add(line);
+            double childX = Math.min(x + xOffset, PANE_WIDTH - NODE_RADIUS - 10);
+            double childY = y + VERTICAL_SPACING;
+            if (childX >= NODE_RADIUS && childX <= PANE_WIDTH - NODE_RADIUS) {
+                Line line = new Line(x, y, childX, childY);
+                line.setStroke(Color.GRAY);
+                line.setStrokeWidth(1.5);
+                treePane.getChildren().add(line);
 
-            // Dibujar hijo derecho recursivamente con menos espaciado
-            drawTreeRecursive(rightChild, childX, childY, xOffset / 1.8);
+                // Dibujar hijo derecho recursivamente
+                drawTreeRecursive(rightChild, childX, childY, nextXOffset);
+            }
         }
 
-        // Dibujar nodo actual
-        Circle nodeCircle = new Circle(x, y, 20);
-        nodeCircle.setFill(Color.CYAN);
-        nodeCircle.setStroke(Color.DARKBLUE);
-        nodeCircle.setStrokeWidth(2);
-        treePane.getChildren().add(nodeCircle);
+        // Dibujar nodo actual solo si está dentro de los límites
+        if (x >= NODE_RADIUS && x <= PANE_WIDTH - NODE_RADIUS) {
+            Circle nodeCircle = new Circle(x, y, NODE_RADIUS);
+            nodeCircle.setFill(Color.CYAN);
+            nodeCircle.setStroke(Color.DARKBLUE);
+            nodeCircle.setStrokeWidth(2);
+            treePane.getChildren().add(nodeCircle);
 
-        // Dibujar valor del nodo
-        Text value = new Text(String.valueOf(node.data));
-        value.setX(x - value.getBoundsInLocal().getWidth() / 2);
-        value.setY(y + 5);
-        value.setFill(Color.BLACK);
-        value.setFont(Font.font("System", FontWeight.BOLD, 12));
-        treePane.getChildren().add(value);
+            // Dibujar valor del nodo con fuente más pequeña
+            Text value = new Text(String.valueOf(node.data));
+            value.setX(x - value.getBoundsInLocal().getWidth() / 2);
+            value.setY(y + 4);
+            value.setFill(Color.BLACK);
+            value.setFont(Font.font("System", FontWeight.BOLD, 10)); // Reducido de 12 a 10
+            treePane.getChildren().add(value);
+        }
     }
 
     private BTreeNode getLeftChild(BTreeNode node) {
@@ -260,37 +297,62 @@ public class GraphicController implements Initializable {
                 info.append("PreOrder: ").append(bstTree.preOrder()).append("\n");
                 info.append("InOrder: ").append(bstTree.inOrder()).append("\n");
                 info.append("PostOrder: ").append(bstTree.postOrder()).append("\n");
-                info.append("LevelOrder: ").append(getLevelOrder(bstTree)).append("\n");
+                // Usar el método original getLevelOrder pero con manejo de errores
+                try {
+                    info.append("LevelOrder: ").append(getLevelOrder(bstTree)).append("\n");
+                } catch (Exception e) {
+                    info.append("LevelOrder: Error getting level order\n");
+                }
             } else if (rbAVL.isSelected() && !avlTree.isEmpty()) {
                 treeHeight = avlTree.height();
                 info.append("AVL Height: ").append(treeHeight).append("\n");
                 info.append("PreOrder: ").append(avlTree.preOrder()).append("\n");
                 info.append("InOrder: ").append(avlTree.inOrder()).append("\n");
                 info.append("PostOrder: ").append(avlTree.postOrder()).append("\n");
-                info.append("LevelOrder: ").append(getLevelOrder(avlTree)).append("\n");
+                // Usar el método original getLevelOrder pero con manejo de errores
+                try {
+                    info.append("LevelOrder: ").append(getLevelOrder(avlTree)).append("\n");
+                } catch (Exception e) {
+                    info.append("LevelOrder: Error getting level order\n");
+                }
             }
 
-            // Mostrar información en la parte inferior del panel
-            Text tourText = new Text(info.toString());
-            tourText.setX(20);
-            tourText.setY(PANE_HEIGHT - 100);
-            tourText.setFill(Color.BLACK);
-            tourText.setFont(Font.font("System", FontWeight.NORMAL, 12));
+            if (info.length() > 0) {
+                // Mostrar información en la parte inferior del panel
+                Text tourText = new Text(info.toString());
+                tourText.setX(20);
+                tourText.setY(PANE_HEIGHT - 80);
+                tourText.setFill(Color.BLACK);
+                tourText.setFont(Font.font("System", FontWeight.NORMAL, 11));
 
-            // Fondo blanco semi-transparente para legibilidad
-            javafx.scene.shape.Rectangle background = new javafx.scene.shape.Rectangle(
-                    15, PANE_HEIGHT - 120,
-                    tourText.getBoundsInLocal().getWidth() + 20,
-                    tourText.getBoundsInLocal().getHeight() + 20
-            );
-            background.setFill(Color.WHITE);
-            background.setOpacity(0.8);
-            background.setStroke(Color.GRAY);
+                // Calcular dimensiones del texto
+                double textWidth = Math.min(400, PANE_WIDTH - 40); // Ancho máximo
+                double textHeight = info.toString().split("\n").length * 15; // Aproximado
 
-            treePane.getChildren().addAll(background, tourText);
+                // Fondo blanco semi-transparente para legibilidad
+                javafx.scene.shape.Rectangle background = new javafx.scene.shape.Rectangle(
+                        15, PANE_HEIGHT - 100,
+                        textWidth + 10,
+                        textHeight + 20
+                );
+                background.setFill(Color.WHITE);
+                background.setOpacity(0.9);
+                background.setStroke(Color.GRAY);
 
-        } catch (TreeException e) {
-            System.out.println("Tree is empty: " + e.getMessage());
+                treePane.getChildren().addAll(background, tourText);
+            }
+
+        } catch (Exception e) {
+            System.out.println("Error displaying tour info: " + e.getMessage());
+            e.printStackTrace();
+
+            // Mostrar mensaje de error en la interfaz
+            Text errorText = new Text("Error: Cannot display tour information");
+            errorText.setX(20);
+            errorText.setY(PANE_HEIGHT - 80);
+            errorText.setFill(Color.RED);
+            errorText.setFont(Font.font("System", FontWeight.NORMAL, 11));
+            treePane.getChildren().add(errorText);
         }
     }
 
