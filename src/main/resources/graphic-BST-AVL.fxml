@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="700.0" prefWidth="1200.0"
+            xmlns="http://javafx.com/javafx/23.0.1"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="controller.GraphicController">
+
+    <children>
+        <BorderPane AnchorPane.topAnchor="0.0" AnchorPane.leftAnchor="0.0"
+                    AnchorPane.rightAnchor="0.0" AnchorPane.bottomAnchor="0.0">
+
+            <top>
+                <VBox spacing="20.0" style="-fx-background-color: #f25c05;"
+                      BorderPane.alignment="CENTER" prefHeight="160.0">
+                    <padding>
+                        <Insets top="15.0" bottom="15.0" left="20.0" right="20.0"/>
+                    </padding>
+
+                    <!-- Título -->
+                    <Label fx:id="lblTitle" text="Graphic BST / AVL Tree"
+                           alignment="CENTER" textFill="white" maxWidth="Infinity">
+                        <font>
+                            <Font name="System Bold" size="28.0"/>
+                        </font>
+                    </Label>
+
+                    <!-- Botones principales -->
+                    <HBox alignment="CENTER" spacing="25.0" prefHeight="40.0">
+                        <Button fx:id="btnRandomize" text="Randomize"
+                                minWidth="120" minHeight="35"
+                                style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;"/>
+                        <Button fx:id="btnLevels" text="Levels"
+                                minWidth="120" minHeight="35"
+                                style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;"/>
+                        <Button fx:id="btnTourInfo" text="Tour Info"
+                                minWidth="120" minHeight="35"
+                                style="-fx-background-color: #FF9800; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;"/>
+                    </HBox>
+
+                    <!-- Sección de balance y tipo de árbol -->
+                    <HBox alignment="CENTER" spacing="50.0" prefHeight="50.0">
+                        <!-- Selector de tipo de árbol -->
+                        <VBox alignment="CENTER" spacing="8.0" minWidth="200.0">
+                            <Label text="¿Is Balanced?" textFill="white"
+                                   style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                            <HBox spacing="20.0" alignment="CENTER">
+                                <RadioButton fx:id="rbBST" text="Árbol BST"
+                                             textFill="white" style="-fx-font-size: 14px;">
+                                    <toggleGroup>
+                                        <ToggleGroup fx:id="treeTypeGroup"/>
+                                    </toggleGroup>
+                                </RadioButton>
+                                <RadioButton fx:id="rbAVL" text="Árbol AVL"
+                                             textFill="white" style="-fx-font-size: 14px;"
+                                             toggleGroup="$treeTypeGroup"/>
+                            </HBox>
+                        </VBox>
+
+                        <!-- Estado del árbol -->
+                        <VBox alignment="CENTER" spacing="5.0" minWidth="250.0">
+                            <Label fx:id="lblTreeStatus" text="BST is not balanced!!!"
+                                   textFill="#FFFF00" alignment="CENTER"
+                                   style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-background-color: rgba(0,0,0,0.2); -fx-padding: 5px 10px; -fx-background-radius: 5px;"/>
+                        </VBox>
+                    </HBox>
+                </VBox>
+            </top>
+
+            <center>
+                <ScrollPane fitToWidth="true" fitToHeight="true" pannable="true"
+                            style="-fx-background: #c8e6c9; -fx-border-color: #4CAF50; -fx-border-width: 2px;">
+                    <Pane fx:id="treePane"
+                          style="-fx-background-color: #c8e6c9;"
+                          minHeight="600.0" minWidth="1200.0" prefHeight="600.0" prefWidth="1200.0"/>
+                </ScrollPane>
+            </center>
+        </BorderPane>
+    </children>
+</AnchorPane>
